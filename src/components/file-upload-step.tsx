@@ -1,0 +1,203 @@
+'use client'
+
+import { useMemo } from 'react'
+import { useForm } from 'react-hook-form'
+
+import { zodResolver } from '@hookform/resolvers/zod'
+import { ImageIcon } from 'lucide-react'
+import { useTranslations } from 'next-intl'
+import z from 'zod'
+
+import { useUploadImageForOcr } from '@/api/ocr/mutations'
+import { TOcrResponse } from '@/api/ocr/types'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { EOcrMethod } from '@/lib/ocr/enums'
+import { getAllOcrTemplates } from '@/lib/ocr/templates'
+import { useModal } from '@/providers/modal-provider'
+import { createUploadFileSchema } from '@/schemas/file-upload'
+
+import { ImageFilePreview } from './image-file-preview'
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from './ui/form'
+import { Separator } from './ui/separator'
+import { Spinner } from './ui/spinner'
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
+
+type TFormValues = z.infer<ReturnType<typeof createUploadFileSchema>>
+
+type TProps = {
+  defaultValues?: TFormValues | null
+  onUploadComplete?: (data: TOcrResponse, values: TFormValues) => void
+}
+
+const processingOptions = [
+  {
+    value: EOcrMethod.OPENAI,
+    label: 'OpenAI',
+  },
+]
+
+const templates = getAllOcrTemplates()
+
+const FileUploadStep = ({ defaultValues, onUploadComplete }: TProps) => {
+  const t = useTranslations()
+
+  const { openModal } = useModal()
+  const { mutateAsync: uploadImageForOcr, isPending } = useUploadImageForOcr()
+
+  const form = useForm({
+    resolver: zodResolver(createUploadFileSchema(t)),
+    defaultValues: defaultValues || {
+      file: undefined,
+      method: processingOptions[0].value,
+      templateType: 'freeform',
+    },
+    disabled: isPending,
+  })
+
+  const onPreview = (file: File) => {
+    if (!file) return
+
+    openModal(<ImageFilePreview file={file} />, {
+      title: t('image_upload.preview.title'),
+      description: t('image_upload.preview.description'),
+    })
+  }
+
+  const onSubmit = async (data: TFormValues) => {
+    const formData = new FormData()
+    formData.append('file', data.file)
+    formData.append('method', data.method)
+    formData.append('templateType', data.templateType)
+
+    const { data: res } = await uploadImageForOcr(formData)
+
+    onUploadComplete?.(res, data)
+  }
+
+  return (
+    <Card className="max-w-lg w-full">
+      <CardHeader>
+        <CardTitle>{t('image_upload.title')}</CardTitle>
+        <CardDescription>{t('image_upload.description')}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="file"
+              render={({ field: { onChange, value, disabled, ...field } }) => (
+                <FormItem>
+                  <FormLabel>{t('image_upload.form.select_image.label')}</FormLabel>
+                  <FormControl>
+                    <div className="w-full flex items-center gap-2">
+                      <Input
+                        id="file"
+                        type="file"
+                        accept="image/jpeg,image/png,image/jpg"
+                        disabled={disabled}
+                        data-value={value?.name || 'No File Selected'}
+                        className={`placeholder:text-transparent! text-transparent! relative after:content-[attr(data-value)] after:block after:text-muted-foreground after:absolute after:right-2 after:top-[50%] after:translate-y-[-50%] after:max-w-[50%] after:truncate md:after:max-w-[70%]`}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (file) onChange(file)
+                        }}
+                        {...field}
+                      />
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div>
+                            <Button
+                              size="icon"
+                              type="button"
+                              disabled={!value}
+                              onClick={() => onPreview(value)}
+                            >
+                              <ImageIcon />
+                            </Button>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>{t('image_upload.preview.title')}</TooltipContent>
+                      </Tooltip>
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="method"
+              render={({ field: { onChange, ...field } }) => (
+                <FormItem>
+                  <FormLabel>{t('image_upload.form.processing_method.label')}</FormLabel>
+                  <FormControl>
+                    <Select {...field} onValueChange={onChange} disabled>
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {processingOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="templateType"
+              render={({ field: { onChange, ...field } }) => (
+                <FormItem>
+                  <FormLabel>{t('image_upload.form.template_type.label')}</FormLabel>
+                  <FormControl>
+                    <Select {...field} onValueChange={onChange}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {templates.map((template) => (
+                          <SelectItem key={template.type} value={template.type}>
+                            {template.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <Separator />
+
+            <Button type="submit" className="w-full" disabled={form.formState.disabled}>
+              {isPending && <Spinner />}
+              {t('image_upload.form.submit')}
+            </Button>
+          </form>
+        </Form>
+      </CardContent>
+    </Card>
+  )
+}
+
+export { FileUploadStep }
+
+export type { TFormValues as TFileUploadFormValues }

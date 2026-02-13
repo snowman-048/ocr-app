@@ -1,0 +1,27 @@
+{
+  "image_upload": {
+    "title": "Image Upload",
+    "description": "Upload an image to start processing it",
+    "preview": {
+      "title": "Preview",
+      "description": "Preview of the uploaded image"
+    },
+    "form": {
+      "select_image": {
+        "label": "Select Image"
+      },
+      "processing_method": {
+        "label": "Processing Method"
+      },
+      "template_type": {
+        "label": "Template"
+      },
+      "submit": "Start Processing"
+    }
+  },
+  "validation": {
+    "big_file": "File must be less than {size} MB",
+    "file_type": "Only the following files are allowed: {files}",
+    "required": "This field is required"
+  }
+}
