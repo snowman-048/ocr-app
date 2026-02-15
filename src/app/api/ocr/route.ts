@@ -7,14 +7,11 @@ import { EOcrMethod } from '@/lib/ocr/enums'
 import { processWithOpenAI } from '@/lib/ocr/openai-processor'
 import { TTemplateRecord, TTemplateType, getOcrTemplate } from '@/lib/ocr/templates'
 
-export const runtime = 'nodejs'
-// export const maxDuration = 120;
-
 const PROCESSORS_MAP = {
   [EOcrMethod.OPENAI]: processWithOpenAI,
 }
 
-export async function POST(request: NextRequest) {
+const POST = async (request: NextRequest) => {
   const startTime = Date.now()
 
   try {
@@ -50,10 +47,12 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(arrayBuffer)
     const { base64, quality: imageQuality } = await processImage(buffer)
 
-    const records = await processor({
+    const processedData = await processor({
       base64Image: base64,
       templateType: template.type as TTemplateType,
     })
+
+    const records = processedData.records
 
     const validatedRecords = (
       template.schema ? z.array(template.schema).parse(records) : records
@@ -65,6 +64,7 @@ export async function POST(request: NextRequest) {
       method,
       templateType,
       imageQuality,
+      tokensConsumption: processedData.tokensConsumption,
     }
 
     return NextResponse.json(response)
@@ -78,3 +78,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
+
+export const runtime = 'nodejs'
+
+export { POST }

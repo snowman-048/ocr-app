@@ -8,7 +8,9 @@
     },
     "form": {
       "select_image": {
-        "label": "Select Image"
+        "label": "Select Image",
+        "selected_files": "Selected {amount} Files",
+        "no_files": "No Files Selected"
       },
       "processing_method": {
         "label": "Processing Method"
@@ -19,9 +21,23 @@
       "submit": "Start Processing"
     }
   },
+  "ocr_validation": {
+    "finish_validation": "Finish Validation",
+    "next_item": "Next Sheet"
+  },
   "validation": {
+    "required": "This field is required",
+    "select_at_least": "Please select at least {amount} item(s)",
+    "select_at_most": "Please select at most {amount} item(s)",
     "big_file": "File must be less than {size} MB",
-    "file_type": "Only the following files are allowed: {files}",
-    "required": "This field is required"
+    "file_type": "Only the following files are allowed: {files}"
+  },
+  "toast": {
+    "success": {
+      "visual_detection": "Visual detection was completed successfully in {time} seconds"
+    }
+  },
+  "common": {
+    "previous": "Previous"
   }
 }

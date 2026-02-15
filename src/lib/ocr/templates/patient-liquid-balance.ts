@@ -1,8 +1,8 @@
-import z from 'zod'
-
+// import z from 'zod'
 import { TOcrTemplate } from '.'
 import { EOcrMethod } from '../enums'
-import { createOcrCellSchema, createOcrRecordSchema } from '../schemas'
+
+// import { createOcrCellSchema, createOcrRecordSchema } from '../schemas'
 
 // const userActivityRecordSchema = createOcrRecordSchema([
 //   createOcrCellSchema({ key: z.literal('index'), value: z.number() }),
@@ -15,18 +15,22 @@ import { createOcrCellSchema, createOcrRecordSchema } from '../schemas'
 //   createOcrCellSchema({ key: z.literal('number2'), value: z.number() }),
 // ])
 
+const NUMBER_OF_ROWS = 24
+
 const patientLiquidBalanceTemplate: TOcrTemplate = {
   type: 'patientLiquidBalance' as const,
   name: 'Patient Liquid Balance',
   description: `Structured log of a patient's liquid balance for a day`,
   // schema: userActivityRecordSchema,
+  expectedRowCount: NUMBER_OF_ROWS,
   ocrMethodMeta: {
     [EOcrMethod.OPENAI]: {
       extractionRules: [
-        'Ignore and omit empty columns',
-        'Ignore total balance fields',
-        `Ignore fields that don't belong to columns described in the structure`,
-        'If a value takes several columns, use this value for both columns',
+        `This sheet has EXACTLY ${NUMBER_OF_ROWS} rows (hours 7-6 over 24 hours)`,
+        'Skip empty columns (columns 5-8)',
+        'Ignore total/sum rows at the bottom',
+        'If a value spans multiple columns, duplicate it for each relevant field',
+        'Header row should NOT be included in extracted data',
       ],
     },
   },
@@ -43,45 +47,78 @@ const patientLiquidBalanceTemplate: TOcrTemplate = {
       label: 'Normal Intake',
       type: 'text',
       position: 'Second column',
-      description: 'A number representing amount of liquid in ml taken per hour with mouth',
+      description: 'Amount of liquid in ml taken per hour with mouth',
     },
     {
       key: 'injection_intake',
       label: 'Injection Intake',
       type: 'text',
       position: 'Third column',
-      description:
-        'A number representing amount of liquid in ml taken per hour by injecting it into a patient',
+      description: 'Amount of liquid in ml taken per hour by injecting it into a patient',
     },
     {
       key: 'other_intake',
       label: 'Other Intake',
       type: 'text',
       position: 'Fourth column',
-      description: 'A number representing amount of liquid in ml taken per hour by any other means',
+      description: 'Amount of liquid in ml taken per hour by any other means',
+    },
+    {
+      key: 'empty',
+      label: 'none',
+      type: 'empty',
+      position: 'Fifth column',
+      description: 'Omit',
+    },
+    {
+      key: 'empty',
+      label: 'none',
+      type: 'empty',
+      position: 'Sixth column',
+      description: 'Omit',
+    },
+    {
+      key: 'empty',
+      label: 'none',
+      type: 'empty',
+      position: 'Seventh column',
+      description: 'Omit',
+    },
+    {
+      key: 'empty',
+      label: 'none',
+      type: 'empty',
+      position: 'Eighth column',
+      description: 'Omit',
+    },
+    {
+      key: 'intake_ngs',
+      label: 'Intake NGS',
+      type: 'text',
+      position: 'Nineth column',
+      description: 'Amount of liquid in ml per hour that was taken in by any special means',
     },
     {
       key: 'secretion',
       label: 'Secretion',
       type: 'text',
       position: 'Tenth column',
-      description: 'A number representing amount of liquid in ml produced per hour by a patient',
+      description: 'Amount of liquid in ml produced per hour by a patient',
     },
     {
       key: 'special_weight',
       label: 'Special Weight',
       type: 'text',
       position: 'Eleventh column',
-      description:
-        'A number representing amount of liquid in ml produced per hour that was contained',
+      description: 'Amount of liquid in ml produced per hour that was contained',
     },
     {
-      key: 'ngs',
-      label: 'NGS',
+      key: 'secretion_ngs',
+      label: 'Secretion NGS',
       type: 'text',
       position: 'Twelfth column',
       description:
-        'A number representing amount of liquid in ml produced per hour that was taken out by any special means',
+        'Amount of liquid in ml produced per hour that was taken out by any special means',
     },
   ],
   exportVariants: [

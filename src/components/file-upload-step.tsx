@@ -1,11 +1,12 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 
 import { zodResolver } from '@hookform/resolvers/zod'
 import { ImageIcon } from 'lucide-react'
 import { useTranslations } from 'next-intl'
+import { toast } from 'sonner'
 import z from 'zod'
 
 import { useUploadImageForOcr } from '@/api/ocr/mutations'
@@ -35,7 +36,7 @@ type TFormValues = z.infer<ReturnType<typeof createUploadFileSchema>>
 
 type TProps = {
   defaultValues?: TFormValues | null
-  onUploadComplete?: (data: TOcrResponse, values: TFormValues) => void
+  onUploadComplete?: (data: TOcrResponse[], values: TFormValues) => void
 }
 
 const processingOptions = [
@@ -49,38 +50,71 @@ const templates = getAllOcrTemplates()
 
 const FileUploadStep = ({ defaultValues, onUploadComplete }: TProps) => {
   const t = useTranslations()
+  const [isPending, setIsPending] = useState(false)
+
+  // const [isDragging, setIsDragging] = useState(false)
 
   const { openModal } = useModal()
-  const { mutateAsync: uploadImageForOcr, isPending } = useUploadImageForOcr()
+  const { mutateAsync: uploadImageForOcr } = useUploadImageForOcr()
 
   const form = useForm({
     resolver: zodResolver(createUploadFileSchema(t)),
     defaultValues: defaultValues || {
-      file: undefined,
+      files: undefined,
       method: processingOptions[0].value,
       templateType: 'freeform',
     },
     disabled: isPending,
   })
 
-  const onPreview = (file: File) => {
-    if (!file) return
+  const onPreview = (files: File[]) => {
+    if (!files?.length) return
 
-    openModal(<ImageFilePreview file={file} />, {
+    openModal(<ImageFilePreview files={files} />, {
       title: t('image_upload.preview.title'),
       description: t('image_upload.preview.description'),
     })
   }
 
+  const onChangeFiles = (fileList: FileList | File[] | null) => {
+    const files = fileList ? Array.from(fileList) : undefined
+    if (files) form.setValue('files', files)
+  }
+
   const onSubmit = async (data: TFormValues) => {
-    const formData = new FormData()
-    formData.append('file', data.file)
-    formData.append('method', data.method)
-    formData.append('templateType', data.templateType)
+    setIsPending(true)
 
-    const { data: res } = await uploadImageForOcr(formData)
+    try {
+      const res = await Promise.all(
+        data.files.map((file) => {
+          const formData = new FormData()
+          formData.append('file', file)
+          formData.append('method', data.method)
+          formData.append('templateType', data.templateType)
 
-    onUploadComplete?.(res, data)
+          return uploadImageForOcr(formData)
+        }),
+      )
+
+      const longestTime = res.reduce((acc, item) => {
+        return acc.data.processingTime > item.data.processingTime ? acc : item
+      }).data.processingTime
+
+      toast.success(
+        t('toast.success.visual_detection', {
+          time: longestTime / 1000,
+        }),
+      )
+
+      onUploadComplete?.(
+        res.map((r) => r.data),
+        data,
+      )
+    } catch (error) {
+      console.error(error)
+    } finally {
+      setIsPending(false)
+    }
   }
 
   return (
@@ -94,23 +128,49 @@ const FileUploadStep = ({ defaultValues, onUploadComplete }: TProps) => {
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
-              name="file"
+              name="files"
               render={({ field: { onChange, value, disabled, ...field } }) => (
                 <FormItem>
                   <FormLabel>{t('image_upload.form.select_image.label')}</FormLabel>
                   <FormControl>
-                    <div className="w-full flex items-center gap-2">
+                    <div
+                      // onDragOver={(e) => {
+                      //   e.preventDefault()
+                      //   console.log('onDragOver')
+
+                      //   setIsDragging(true)
+                      // }}
+                      // onDragLeave={() => {
+                      //   setIsDragging(false)
+                      // }}
+                      // onDrop={(e) => {
+                      //   e.preventDefault()
+                      //   setIsDragging(false)
+
+                      //   const droppedFiles = Array.from(e.dataTransfer.files)
+                      //   const imageFiles = droppedFiles.filter((file) =>
+                      //     ['image/jpeg', 'image/png', 'image/jpg'].includes(file.type),
+                      //   )
+
+                      //   onChangeFiles(imageFiles)
+                      // }}
+                      className="w-full flex items-center gap-2"
+                    >
                       <Input
                         id="file"
                         type="file"
                         accept="image/jpeg,image/png,image/jpg"
+                        multiple
                         disabled={disabled}
-                        data-value={value?.name || 'No File Selected'}
+                        data-value={
+                          value?.length
+                            ? t('image_upload.form.select_image.selected_files', {
+                                amount: value.length,
+                              })
+                            : t('image_upload.form.select_image.no_files')
+                        }
                         className={`placeholder:text-transparent! text-transparent! relative after:content-[attr(data-value)] after:block after:text-muted-foreground after:absolute after:right-2 after:top-[50%] after:translate-y-[-50%] after:max-w-[50%] after:truncate md:after:max-w-[70%]`}
-                        onChange={(e) => {
-                          const file = e.target.files?.[0]
-                          if (file) onChange(file)
-                        }}
+                        onChange={(e) => onChangeFiles(e.target.files)}
                         {...field}
                       />
                       <Tooltip>
@@ -119,7 +179,7 @@ const FileUploadStep = ({ defaultValues, onUploadComplete }: TProps) => {
                             <Button
                               size="icon"
                               type="button"
-                              disabled={!value}
+                              disabled={!value?.length}
                               onClick={() => onPreview(value)}
                             >
                               <ImageIcon />

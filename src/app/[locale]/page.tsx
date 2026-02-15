@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 
 import { TOcrResponse } from '@/api/ocr/types'
-import { DynamicDataTable } from '@/components/dynamic-data-table'
+import { DataReviewStep } from '@/components/data-review-step'
 import { FileUploadStep, TFileUploadFormValues } from '@/components/file-upload-step'
 
 enum EStep {
@@ -16,8 +16,8 @@ enum EStep {
 const STEP_QUERY_KEY = 'step'
 
 const MainPage = () => {
-  const [ocrResponse, setOcrResponse] = useState<TOcrResponse | null>(null)
   const [fileUploadValues, setFileUploadValues] = useState<TFileUploadFormValues | null>(null)
+  const [ocrResponse, setOcrResponse] = useState<TOcrResponse[] | null>(null)
 
   const router = useRouter()
   const pathname = usePathname()
@@ -35,8 +35,6 @@ const MainPage = () => {
     }
   }, [router, step])
 
-  console.log('ocrResponse', ocrResponse)
-
   return (
     <div className="flex items-center justify-center w-full h-full overflow-hidden p-4">
       {step === EStep.FILE_UPLOAD && (
@@ -49,11 +47,13 @@ const MainPage = () => {
           }}
         />
       )}
-      {step === EStep.DYNAMIC_DATA_TABLE && !!ocrResponse && (
-        <DynamicDataTable
-          initialData={ocrResponse.records}
-          templateType={ocrResponse.templateType}
-          onGoBack={() => setStep(EStep.FILE_UPLOAD)}
+      {step === EStep.DYNAMIC_DATA_TABLE && !!ocrResponse?.length && (
+        <DataReviewStep
+          ocrResponse={ocrResponse}
+          onGoBack={() => {
+            setStep(EStep.FILE_UPLOAD)
+            setOcrResponse(null)
+          }}
           onGoNext={(data) => {
             console.log('data', data)
           }}

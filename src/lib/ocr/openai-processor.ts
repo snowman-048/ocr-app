@@ -3,6 +3,7 @@ import OpenAI from 'openai'
 import { EConfidenceLevel, EOcrMethod } from './enums'
 import { TOcrTemplate, TTemplateRecord, TTemplateType, getOcrTemplate } from './templates'
 import { FREEFORM_TEMPLATE_TYPE } from './templates/freeform'
+import { TOcrAiConsumption } from './types'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -18,12 +19,14 @@ const CONFIDENCE_RULES = `CONFIDENCE RULES (per field):
 - "${EConfidenceLevel.MEDIUM}": Text is readable but slightly unclear or ambiguous
 - "${EConfidenceLevel.LOW}": Text is difficult to read, partially obscured, or uncertain`
 
+const getTemplateCacheKey = (templateType: TTemplateType) => {
+  return `ocr-template-${templateType}`
+}
+
 const getFreeformPrompt = () => {
   return `You are an OCR system that extracts data from sheets.
-
 Analyze this image and extract ALL data you can find into a JSON array of records.
 Each record contains an array of field objects with key, value, and confidence.
-
 Return JSON in this EXACT format:
 {
   "records": [
@@ -42,9 +45,7 @@ Return JSON in this EXACT format:
     ]
   ]
 }
-
 ${CONFIDENCE_RULES}
-
 EXTRACTION RULES:
 - Each record (row) MUST contain data from a single row of the sheet
 - Use descriptive field keys based on context (e.g., "date", "amount", "name")
@@ -55,126 +56,147 @@ EXTRACTION RULES:
 - Return ONLY valid JSON`
 }
 
-// - Rows and columns are split by black lines
-// - Ignore any drawings and lines that are not part of the sheet
-
 const getStructuredPrompt = (template: TOcrTemplate) => {
-  const fieldDescriptions = template.fields
-    ?.map((field, index) => {
+  const dataFields = template.fields?.filter((f) => f.type !== 'empty') || []
+  const fieldDescriptions = dataFields
+    .map((field, index) => {
       const formatInfo = field.format ? ` (format: ${field.format})` : ''
-      return `${index + 1}. key: "${field.key}", type: ${field.type}, position: ${field.position}${formatInfo}`
+      const requiredInfo = field.required ? ' [REQUIRED]' : ' [OPTIONAL]'
+      return `${index + 1}. "${field.key}" (${field.type})${requiredInfo} - ${field.position}: ${field.description}${formatInfo}`
     })
     .join('\n')
-
-  const exampleRecord = template.fields?.map((field) => {
+  const exampleRecord = dataFields.map((field) => {
     let exampleValue
     if (field.type === 'number') exampleValue = 0
     else if (field.type === 'date')
       exampleValue = field.format === 'dd.mm.yyyy' ? '12.02.2026' : '2026-02-12'
-    else exampleValue = 'example'
-
+    else exampleValue = '1'
     return {
       key: field.key,
       value: exampleValue,
       confidence: EConfidenceLevel.HIGH,
     }
   })
-
-  return `You are an OCR system extracting data from a "${template.name}" sheet which is ${template.description}.
-
-This sheet has a PREDEFINED STRUCTURE with these fields IN ORDER:
+  const rowCountConstraint = template.expectedRowCount
+    ? `
+CRITICAL ROW COUNT CONSTRAINT:
+- This sheet contains EXACTLY ${template.expectedRowCount} data rows
+- You MUST extract exactly ${template.expectedRowCount} records
+- Count the rows carefully before extraction
+- Verify your output has exactly ${template.expectedRowCount} records before responding
+`
+    : ''
+  const extraRules = template.ocrMethodMeta?.[EOcrMethod.OPENAI]?.extractionRules || []
+  return `You are an OCR system extracting data from a "${template.name}" sheet.
+${template.description}
+${rowCountConstraint}
+FIELD STRUCTURE (${dataFields.length} fields per row):
 ${fieldDescriptions}
-
-CRITICAL: Extract EVERY SINGLE ROW visible in the image. Do not skip any rows. Count the rows and ensure you extract all of them.
-
-Extract ALL rows and map them to this EXACT schema:
+${extraRules.length > 0 ? `TEMPLATE-SPECIFIC RULES:\n${extraRules.map((rule) => `- ${rule}`).join('\n')}\n` : ''}
+EXAMPLE OUTPUT FORMAT (showing the first row):
 {
   "records": [
-    ${JSON.stringify(exampleRecord, null, 4)},
-    ... (continue for ALL rows in the image)
+    ${JSON.stringify(exampleRecord)}
+    ${template.expectedRowCount ? `... (continue for all ${template.expectedRowCount} rows)` : '... (continue for ALL visible rows)'}
   ]
 }
-
-CRITICAL RULES:
-1. EXTRACTION RULES (HIGHEST PRIORITY):
-  - YOU MUST EXTRACT EVERY VISIBLE ROW - DO NOT STOP HALFWAY
-  - Each record (row) MUST contain data from a single row of the sheet
-  - Count the total rows in the image and verify you extracted that many
-  - Process the entire image from top to bottom
-  - Do not truncate results - include all rows even if there are many
-  ${template.ocrMethodMeta?.[EOcrMethod.OPENAI]?.extractionRules?.map((rule) => `- ${rule}`).join('\n') || ''}
-
-2. STRUCTURE:
-  - Each record is an array of objects with: key, value, confidence
-  - Use EXACT field keys: ${template.fields?.map((f: any) => f.key).join(', ')}
-  - Maintain field order as listed above
-
-3. ${CONFIDENCE_RULES}
-
-4. MAPPING STRATEGY:
-  - Use column positions to identify fields
-  - Column order: ${template.fields?.map((f: any) => f.label).join(' → ')}
-  - If a cell is illegible, use null for value and "${EConfidenceLevel.LOW}" for confidence
-  - If a cell is empty, use empty string for value and "${EConfidenceLevel.HIGH}" for confidence
-  - Each record MUST have exactly ${template.fields?.length} fields (columns)
-
-5. OUTPUT:
-  - Return ONLY valid JSON
-  - No additional text or explanations
-  - Include ALL rows without truncation`
+EXTRACTION REQUIREMENTS:
+1. ROW EXTRACTION:
+  ${template.expectedRowCount ? `- Extract EXACTLY ${template.expectedRowCount} rows (no more, no less)` : '- Extract EVERY visible data row'}
+  - Process the entire table from top to bottom
+  - Skip header rows (column labels)
+  - Each record = one data row only
+  ${template.expectedRowCount ? `- VERIFY: Final output must have ${template.expectedRowCount} records` : ''}
+2. FIELD EXTRACTION:
+  - Extract only these fields: ${dataFields.map((f) => f.key).join(', ')}
+  - Maintain exact field order as listed
+  - Each record must have exactly ${dataFields.length} field objects
+3. VALUE HANDLING:
+  - Empty cells → empty string "" with confidence "${EConfidenceLevel.HIGH}"
+  - Illegible cells → null with confidence "${EConfidenceLevel.LOW}"
+  - Numeric values → keep as numbers or strings based on field type
+4. ${CONFIDENCE_RULES}
+5. QUALITY CHECKS:
+  ${template.expectedRowCount ? `- Count rows: Output MUST contain ${template.expectedRowCount} records` : '- Count rows: Extract ALL visible data rows'}
+  - Count fields: Each record MUST contain ${dataFields.length} fields
+  - Check order: Fields must match the sequence above
+  - Verify structure: Nested array format [[field objects], [field objects], ...]
+OUTPUT REQUIREMENTS:
+- Return ONLY valid JSON (no explanations)
+- Use exact key names (case-sensitive)
+- Preserve data types (numbers as numbers, text as strings)
+${template.expectedRowCount ? `- Final JSON must have exactly ${template.expectedRowCount} records in the array` : ''}
+- Do not truncate or summarize - extract complete data`
 }
 
-const processWithOpenAI = async ({
-  base64Image,
-  templateType,
-}: TProps): Promise<TTemplateRecord[]> => {
+const processWithOpenAI = async ({ base64Image, templateType }: TProps) => {
   const template = getOcrTemplate(templateType)
-
   let prompt = ''
   if (template.type === FREEFORM_TEMPLATE_TYPE) {
     prompt = getFreeformPrompt()
   } else {
     prompt = getStructuredPrompt(template)
   }
-
   try {
     const response = await openai.chat.completions.create({
-      model: 'gpt-5.2',
-      // model: 'gpt-4o-mini',
+      model: 'gpt-4.1-mini',
       messages: [
+        {
+          role: 'system',
+          content: prompt,
+        },
         {
           role: 'user',
           content: [
-            { type: 'text', text: prompt },
+            {
+              type: 'text',
+              text: `Extract data from this ${template.name} sheet`,
+            },
             {
               type: 'image_url',
               image_url: {
                 url: `data:image/jpeg;base64,${base64Image}`,
-                detail: 'low',
+                detail: 'high',
               },
             },
           ],
         },
       ],
+      temperature: 0,
+      max_completion_tokens: 5000,
       response_format: { type: 'json_object' },
-      // temperature: 0.1,
+      prompt_cache_key: getTemplateCacheKey(template.type as TTemplateType),
     })
 
+    const tokensConsumption = {} as TOcrAiConsumption
+    const usage = response.usage
+    if (usage) {
+      tokensConsumption.total = usage.total_tokens
+      tokensConsumption.input = usage.prompt_tokens
+      tokensConsumption.output = usage.completion_tokens
+      const cachedTokens =
+        (usage as any).cached_tokens ||
+        (usage as any).prompt_tokens_details?.cached_tokens ||
+        (usage as any).prompt_cache_hit_tokens ||
+        0
+      tokensConsumption.cached = cachedTokens
+    }
     const refusal = response.choices[0].message.refusal
     if (refusal) {
       throw new Error(refusal)
     }
-
     const content = response.choices[0].message.content
     if (!content) throw new Error('No response from OpenAI')
-
     const parsed = JSON.parse(content)
+    const records = (parsed.records || []) as TTemplateRecord[]
 
-    return parsed.records || []
+    return {
+      records,
+      tokensConsumption,
+    }
   } catch (error: any) {
     console.error('OpenAI processing error:', error)
     throw new Error(error?.message || 'OpenAI processing error')
   }
 }
-
 export { processWithOpenAI }

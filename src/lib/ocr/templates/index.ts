@@ -8,11 +8,12 @@ type TOcrTemplate = {
   type: string
   name: string
   description: string
+  expectedRowCount?: number
   schema?: z.ZodSchema
   fields?: {
     key: string
     label: string
-    type: 'number' | 'date' | 'text'
+    type: 'number' | 'date' | 'text' | 'empty'
     position: string
     description: string
     required?: boolean
