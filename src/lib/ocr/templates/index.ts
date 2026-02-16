@@ -14,9 +14,11 @@ type TOcrTemplateExportVariant = {
   id: string
   name: string
   description: string
+  isBatchExport?: boolean
   columnsOrder?: string[]
   getHeader?: (value: string) => string
   formatData: (records: TTemplateRecord[]) => Record<string, any>[]
+  formatBatchData?: (allRecords: TTemplateRecord[][]) => any[]
 }
 
 type TOcrTemplate = {
