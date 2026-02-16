@@ -4,7 +4,12 @@
     "description": "Upload an image to start processing it",
     "preview": {
       "title": "Preview",
-      "description": "Preview of the uploaded image"
+      "description": "Preview of the uploaded images"
+    },
+    "reorder": {
+      "title": "Reorder",
+      "description": "Reorder the uploaded images",
+      "save_order": "Save Order"
     },
     "form": {
       "select_image": {
@@ -37,12 +42,14 @@
   },
   "toast": {
     "success": {
-      "visual_detection": "Visual detection was completed successfully in {time} seconds"
+      "visual_detection": "Visual detection was completed successfully in {time} seconds",
+      "files_reordered": "Files were reordered successfully"
     }
   },
   "common": {
     "no_data": "No Data",
     "next": "Next",
+    "cancel": "Cancel",
     "next_item": "Next Item",
     "next_step": "Next Step",
     "previous": "Previous"

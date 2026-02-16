@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 
 import { zodResolver } from '@hookform/resolvers/zod'
-import { ImageIcon } from 'lucide-react'
+import { ImageIcon, SendToBack } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
 import z from 'zod'
@@ -27,6 +27,7 @@ import { useModal } from '@/providers/modal-provider'
 import { createUploadFileSchema } from '@/schemas/file-upload'
 
 import { ImageFilePreview } from './image-file-preview'
+import { SortableImageFilesList } from './sortable-image-files-list'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from './ui/form'
 import { Separator } from './ui/separator'
 import { Spinner } from './ui/spinner'
@@ -50,11 +51,10 @@ const templates = getAllOcrTemplates()
 
 const FileUploadStep = ({ defaultValues, onUploadComplete }: TProps) => {
   const t = useTranslations()
+
   const [isPending, setIsPending] = useState(false)
 
-  // const [isDragging, setIsDragging] = useState(false)
-
-  const { openModal } = useModal()
+  const { openModal, closeModal } = useModal()
   const { mutateAsync: uploadImageForOcr } = useUploadImageForOcr()
 
   const form = useForm({
@@ -74,6 +74,29 @@ const FileUploadStep = ({ defaultValues, onUploadComplete }: TProps) => {
       title: t('image_upload.preview.title'),
       description: t('image_upload.preview.description'),
     })
+  }
+
+  const onReorderFiles = (files: File[]) => {
+    if (!files?.length) return
+
+    openModal(
+      <SortableImageFilesList
+        items={files.map((file, index) => ({ id: `${file}-${index}`, data: file }))}
+        onSave={(reorderedFiles) => {
+          form.setValue(
+            'files',
+            reorderedFiles.map(({ data }) => data),
+          )
+          closeModal()
+          toast.success(t('toast.success.files_reordered'))
+        }}
+        onClose={closeModal}
+      />,
+      {
+        title: 'Reorder Files',
+        description: 'Change the processing order of your images',
+      },
+    )
   }
 
   const onChangeFiles = (fileList: FileList | File[] | null) => {
@@ -133,29 +156,7 @@ const FileUploadStep = ({ defaultValues, onUploadComplete }: TProps) => {
                 <FormItem>
                   <FormLabel>{t('image_upload.form.select_image.label')}</FormLabel>
                   <FormControl>
-                    <div
-                      // onDragOver={(e) => {
-                      //   e.preventDefault()
-                      //   console.log('onDragOver')
-
-                      //   setIsDragging(true)
-                      // }}
-                      // onDragLeave={() => {
-                      //   setIsDragging(false)
-                      // }}
-                      // onDrop={(e) => {
-                      //   e.preventDefault()
-                      //   setIsDragging(false)
-
-                      //   const droppedFiles = Array.from(e.dataTransfer.files)
-                      //   const imageFiles = droppedFiles.filter((file) =>
-                      //     ['image/jpeg', 'image/png', 'image/jpg'].includes(file.type),
-                      //   )
-
-                      //   onChangeFiles(imageFiles)
-                      // }}
-                      className="w-full flex items-center gap-2"
-                    >
+                    <div className="w-full flex items-center gap-2">
                       <Input
                         id="file"
                         type="file"
@@ -173,6 +174,21 @@ const FileUploadStep = ({ defaultValues, onUploadComplete }: TProps) => {
                         onChange={(e) => onChangeFiles(e.target.files)}
                         {...field}
                       />
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div>
+                            <Button
+                              size="icon"
+                              type="button"
+                              disabled={!value?.length || value.length < 2}
+                              onClick={() => onReorderFiles(value)}
+                            >
+                              <SendToBack />
+                            </Button>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>{t('image_upload.reorder.title')}</TooltipContent>
+                      </Tooltip>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <div>

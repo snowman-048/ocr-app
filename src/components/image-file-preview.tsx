@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useImageFilesPreviews } from '@/hooks/use-image-files-previews'
 
 import { Card, CardContent, CardFooter } from './ui/card'
 import {
@@ -17,23 +17,7 @@ type TProps = {
 }
 
 const ImageFilePreview = ({ files }: TProps) => {
-  const [previews, setPreviews] = useState<string[]>([])
-
-  useEffect(() => {
-    if (!files?.length) return
-
-    files.forEach((file, index) => {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setPreviews((prev) => {
-          const newPreview = [...prev]
-          newPreview[index] = reader.result as string
-          return newPreview
-        })
-      }
-      reader.readAsDataURL(file)
-    })
-  }, [files])
+  const { previews } = useImageFilesPreviews(files)
 
   if (!previews) return <Spinner className="mx-auto" />
 
