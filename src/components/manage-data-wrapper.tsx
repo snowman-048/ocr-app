@@ -59,20 +59,18 @@ const ManageDataWrapper = ({
   const moveToIndex = (index: number) => {
     if (index < 0) return
 
-    setData((prev) => {
-      const newData = [...prev]
-      newData[currentIndex] = { ...newData[currentIndex], records: [...currentRecords] }
+    const newData = [...data]
+    newData[currentIndex] = { ...newData[currentIndex], records: [...currentRecords] }
 
-      if (index >= newData.length) {
-        onGoNext(newData)
-        return newData
-      }
+    if (index >= newData.length) {
+      onGoNext(newData)
+      return
+    }
 
-      setCurrentRecords(newData[index].records)
-      setCurrentIndex(index)
+    setCurrentRecords(newData[index].records)
+    setCurrentIndex(index)
 
-      return newData
-    })
+    setData(newData)
   }
 
   const Actions = ({ className }: { className?: string }) => (

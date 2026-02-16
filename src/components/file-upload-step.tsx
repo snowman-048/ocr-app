@@ -180,7 +180,7 @@ const FileUploadStep = ({ defaultValues, onUploadComplete }: TProps) => {
                             <Button
                               size="icon"
                               type="button"
-                              disabled={!value?.length || value.length < 2}
+                              disabled={!value?.length || value.length < 2 || isPending}
                               onClick={() => onReorderFiles(value)}
                             >
                               <SendToBack />

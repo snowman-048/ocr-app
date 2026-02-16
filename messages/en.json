@@ -33,6 +33,9 @@
   "format_method": {
     "label": "Export Format Method"
   },
+  "export": {
+    "export_to_tsv": "Export to TSV"
+  },
   "validation": {
     "required": "This field is required",
     "select_at_least": "Please select at least {amount} item(s)",

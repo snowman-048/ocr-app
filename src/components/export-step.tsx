@@ -4,6 +4,7 @@ import { useMemo } from 'react'
 
 import { ColumnDef } from '@tanstack/react-table'
 import { Upload } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
 
 import { copyToClipboard } from '@/helpers/copy-to-clipboard'
@@ -13,6 +14,7 @@ import { TOcrTemplate, TOcrTemplateExportVariant, TTemplateRecord } from '@/lib/
 import { ManageDataWrapper, TManageDataWrapperProps } from './manage-data-wrapper'
 import { Button } from './ui/button'
 import { DataTable } from './ui/data-table'
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 
 type TExportStepContentProps = {
   records: TTemplateRecord[]
@@ -27,6 +29,8 @@ const ExportStepContent = ({
   formatMethod,
   // onDataChange,
 }: TExportStepContentProps) => {
+  const t = useTranslations()
+
   const formattedData = useMemo(() => formatMethod.formatData(records), [formatMethod, records])
 
   const columns: ColumnDef<any>[] = useMemo(() => {
@@ -56,20 +60,26 @@ const ExportStepContent = ({
     <div className="min-w-lg w-full flex flex-col gap-2">
       <div className="flex justify-between">
         <div>
-          <p>{formatMethod.name}</p>
+          <p className="font-semibold">{formatMethod.name}</p>
           <p className="text-muted-foreground">{formatMethod.description}</p>
         </div>
-        <Button
-          size="icon"
-          variant="outline"
-          onClick={() => {
-            const tsvData = exportToTsv(formattedData, formatMethod.columnsOrder)
-            copyToClipboard(tsvData)
-            toast.success('Values are copied to clipboard')
-          }}
-        >
-          <Upload />
-        </Button>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              size="icon"
+              variant="outline"
+              onClick={() => {
+                const tsvData = exportToTsv(formattedData, formatMethod.columnsOrder)
+                copyToClipboard(tsvData)
+                toast.success('Values are copied to clipboard')
+              }}
+            >
+              <Upload />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{t('export.export_to_tsv')}</TooltipContent>
+        </Tooltip>
       </div>
       <DataTable
         data={formattedData}

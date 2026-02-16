@@ -65,7 +65,6 @@ const MainPage = () => {
             setCurentOcrData(null)
           }}
           onGoNext={(data) => {
-            console.log('data', data)
             setCurentOcrData(data)
             if (isSingleExportFormat) {
               setFormatMethodId(template.exportVariants[0].id)
