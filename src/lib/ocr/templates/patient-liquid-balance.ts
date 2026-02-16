@@ -1,27 +1,52 @@
-// import z from 'zod'
+import { extractNumbersFromStringAndAdd } from '@/helpers/extract-numbers-from-string'
+import { replaceValuesInObject } from '@/helpers/replace-values-in-object'
+
 import { TOcrTemplate } from '.'
 import { EOcrMethod } from '../enums'
-
-// import { createOcrCellSchema, createOcrRecordSchema } from '../schemas'
-
-// const userActivityRecordSchema = createOcrRecordSchema([
-//   createOcrCellSchema({ key: z.literal('index'), value: z.number() }),
-//   createOcrCellSchema({
-//     key: z.literal('date'),
-//     value: z.string().regex(/^\d{2}\.\d{2}\.\d{4}$/, 'Date must be in dd.mm.yyyy format'),
-//   }),
-//   createOcrCellSchema({ key: z.literal('username'), value: z.string() }),
-//   createOcrCellSchema({ key: z.literal('number1'), value: z.number() }),
-//   createOcrCellSchema({ key: z.literal('number2'), value: z.number() }),
-// ])
+import { convertTemplateRecords } from './helpers'
 
 const NUMBER_OF_ROWS = 24
+
+type TDetectedDataOutput = {
+  hour: string
+  normal_intake: string
+  injection_intake: string
+  other_intake: string
+  intake_ngs: string
+  secretion: string
+  special_weight: string
+  secretion_ngs: string
+}
+
+type TParsedDataField =
+  | 'timeWindow'
+  | 'intakePerOs'
+  | 'intakeIv'
+  | 'intakeIm'
+  | 'totalIntake'
+  | 'secretionCathether'
+  | 'secretionSpecialWeight'
+  | 'stool'
+  | 'totalSecretion'
+  | 'netBalance'
+
+const HEADER_MAP: Record<TParsedDataField, string> = {
+  timeWindow: 'Time Window',
+  intakePerOs: 'Intake per os',
+  intakeIv: 'Intake i.v.',
+  intakeIm: 'Intake i.m.',
+  totalIntake: 'Total Intake',
+  secretionCathether: 'Cathether',
+  secretionSpecialWeight: 'Special Weight',
+  stool: 'Stool',
+  totalSecretion: 'Total Secretion',
+  netBalance: 'Net Balance',
+}
 
 const patientLiquidBalanceTemplate: TOcrTemplate = {
   type: 'patientLiquidBalance' as const,
   name: 'Patient Liquid Balance',
   description: `Structured log of a patient's liquid balance for a day`,
-  // schema: userActivityRecordSchema,
   expectedRowCount: NUMBER_OF_ROWS,
   ocrMethodMeta: {
     [EOcrMethod.OPENAI]: {
@@ -123,10 +148,95 @@ const patientLiquidBalanceTemplate: TOcrTemplate = {
   ],
   exportVariants: [
     {
-      id: 'full',
-      name: 'Complete Log',
-      description: 'All fields',
-      includeFields: ['all'],
+      id: 'default',
+      name: 'Default Format',
+      description: 'All fields with original formatting',
+      formatData: convertTemplateRecords,
+    },
+    {
+      id: 'complete',
+      name: 'Complete dataset',
+      description: 'Groupped by time windows',
+      getHeader: (value) => HEADER_MAP[value as TParsedDataField] ?? value,
+      columnsOrder: [
+        'timeWindow',
+        'intakePerOs',
+        'intakeIv',
+        'intakeIm',
+        'totalIntake',
+        'secretionCathether',
+        'secretionSpecialWeight',
+        'stool',
+        'totalSecretion',
+        'netBalance',
+      ] as TParsedDataField[],
+      formatData: (records) => {
+        const converted = convertTemplateRecords<TDetectedDataOutput>(records)
+
+        const formattedData = [
+          {
+            hourFrom: 0,
+            hourTo: 6,
+          },
+          {
+            hourFrom: 6,
+            hourTo: 12,
+          },
+          {
+            hourFrom: 12,
+            hourTo: 18,
+          },
+          {
+            hourFrom: 18,
+            hourTo: 24,
+          },
+        ].map((group) => {
+          const rawData = converted.filter(
+            (record) => +record.hour >= group.hourFrom && +record.hour < group.hourTo,
+          )
+          const timeWindow = `${group.hourFrom}:00-${group.hourTo}:00`
+          const calculated = rawData.reduce(
+            (acc, record) => {
+              acc.intakeIv +=
+                extractNumbersFromStringAndAdd(record.normal_intake) +
+                extractNumbersFromStringAndAdd(record.injection_intake) +
+                extractNumbersFromStringAndAdd(record.other_intake)
+              acc.secretionCathether += extractNumbersFromStringAndAdd(record.secretion_ngs)
+              acc.secretionSpecialWeight +=
+                extractNumbersFromStringAndAdd(record.secretion) +
+                extractNumbersFromStringAndAdd(record.special_weight)
+              return acc
+            },
+            {
+              intakeIv: 0,
+              secretionCathether: 0,
+              secretionSpecialWeight: 0,
+              // Mock
+              intakePerOs: 0,
+              intakeIm: 0,
+              stool: 0,
+            },
+          )
+          const totalIntake = calculated.intakePerOs + calculated.intakeIv + calculated.intakeIm
+          const totalSecretion =
+            calculated.secretionCathether + calculated.secretionSpecialWeight + calculated.stool
+          const netBalance = totalIntake - totalSecretion
+
+          return {
+            timeWindow,
+            totalIntake,
+            totalSecretion,
+            netBalance,
+            ...replaceValuesInObject({
+              object: calculated,
+              valueToReplace: 0,
+              valueToReplaceWith: '',
+            }),
+          }
+        })
+
+        return formattedData
+      },
     },
   ],
 }

@@ -2,6 +2,7 @@ import z from 'zod'
 
 import { TOcrTemplate } from '.'
 import { createOcrCellSchema, createOcrRecordSchema } from '../schemas'
+import { convertTemplateRecords } from './helpers'
 
 const freeformRecordSchema = createOcrRecordSchema([
   createOcrCellSchema({ key: z.string(), value: z.unknown() }),
@@ -16,10 +17,10 @@ const freeformTemplate: TOcrTemplate = {
   schema: freeformRecordSchema,
   exportVariants: [
     {
-      id: 'full',
-      name: 'Complete Data',
-      description: 'Export all detected fields',
-      includeFields: ['all'],
+      id: 'default',
+      name: 'Default Format',
+      description: 'All fields with original formatting',
+      formatData: convertTemplateRecords,
     },
   ],
 }

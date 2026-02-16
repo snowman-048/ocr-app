@@ -23,7 +23,10 @@
   },
   "ocr_validation": {
     "finish_validation": "Finish Validation",
-    "next_item": "Next Sheet"
+    "next_item": "Next Item"
+  },
+  "format_method": {
+    "label": "Export Format Method"
   },
   "validation": {
     "required": "This field is required",
@@ -38,6 +41,10 @@
     }
   },
   "common": {
+    "no_data": "No Data",
+    "next": "Next",
+    "next_item": "Next Item",
+    "next_step": "Next Step",
     "previous": "Previous"
   }
 }
