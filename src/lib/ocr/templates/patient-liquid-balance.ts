@@ -4,7 +4,8 @@ import { replaceValuesInObject } from '@/helpers/replace-values-in-object'
 
 import { TOcrTemplate } from '.'
 import { EOcrMethod } from '../enums'
-import { convertTemplateRecords } from './helpers'
+import { defaultExportVariant } from './lib/export-variants'
+import { convertTemplateRecords } from './lib/helpers'
 
 const NUMBER_OF_ROWS = 24
 
@@ -235,12 +236,7 @@ const patientLiquidBalanceTemplate: TOcrTemplate = {
     },
   ],
   exportVariants: [
-    {
-      id: 'default',
-      name: 'Default Format',
-      description: 'All fields with original formatting',
-      formatData: convertTemplateRecords,
-    },
+    defaultExportVariant,
     {
       id: 'complete',
       name: 'Complete dataset',

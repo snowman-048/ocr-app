@@ -34,9 +34,10 @@ const EditableCell = ({
   updateCellValue: (rowIndex: number, key: string, newValue: any) => void
 }) => {
   const cell = row.original.find((cell) => cell.key === columnKey)
-  if (!cell) return null
 
-  const [value, setValue] = useState(cell.value)
+  const [value, setValue] = useState(cell?.value)
+
+  if (!cell) return null
 
   const inputType = fieldType === 'number' ? 'number' : 'text'
 

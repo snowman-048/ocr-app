@@ -58,14 +58,18 @@ const MainPage = () => {
       )}
       {step === EStep.DYNAMIC_DATA_TABLE && !!currentOcrData?.length && (
         <DataReviewStep
-          ocrData={currentOcrData}
+          data={currentOcrData}
           template={template}
           onGoBack={() => {
             setStep(EStep.FILE_UPLOAD)
             setCurentOcrData(null)
           }}
-          onGoNext={(data) => {
-            setCurentOcrData(data)
+          onGoNext={(newData) => {
+            const formatted = [...currentOcrData].map((item, index) => ({
+              ...item,
+              records: newData[index],
+            }))
+            setCurentOcrData(formatted)
             if (isSingleExportFormat) {
               setFormatMethodId(template.exportVariants[0].id)
               setStep(EStep.EXPORT)
@@ -88,7 +92,7 @@ const MainPage = () => {
       )}
       {step === EStep.EXPORT && !!formatMethodId && !!currentOcrData?.length && (
         <ExportStep
-          ocrData={currentOcrData}
+          data={currentOcrData}
           template={template}
           formatMethodId={formatMethodId}
           onGoBack={() => {

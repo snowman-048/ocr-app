@@ -1,15 +1,22 @@
 'use client'
 
+import { TOcrResponse } from '@/api/ocr/types'
+import { TOcrTemplate, TTemplateRecord } from '@/lib/ocr/templates'
+
 import { DynamicDataTable } from './dynamic-data-table'
 import { ManageDataWrapper, TManageDataWrapperProps } from './manage-data-wrapper'
 
-type TProps = Omit<TManageDataWrapperProps, 'children'>
+type TProps = Omit<TManageDataWrapperProps<TTemplateRecord[]>, 'children' | 'data'> & {
+  data: TOcrResponse[]
+  template: TOcrTemplate
+}
 
-const DataReviewStep = ({ ocrData, template, onGoBack, onGoNext }: TProps) => {
+const DataReviewStep = ({ data, template, onGoBack, onGoNext }: TProps) => {
   return (
     <ManageDataWrapper
-      ocrData={ocrData}
-      template={template}
+      data={data.map((item) => item.records)}
+      title={template.name}
+      description={template.description}
       onGoBack={onGoBack}
       onGoNext={onGoNext}
     >

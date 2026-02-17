@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/static-components */
 'use client'
 
 import { JSX, useState } from 'react'
@@ -5,7 +6,6 @@ import { JSX, useState } from 'react'
 import { ArrowLeft, ArrowRight } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 
-import { TOcrResponse } from '@/api/ocr/types'
 import {
   Card,
   CardContent,
@@ -14,71 +14,70 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { TOcrTemplate, TTemplateRecord } from '@/lib/ocr/templates'
 import { cn } from '@/lib/utils'
 
 import { Button } from './ui/button'
 
-type TManageDataProvidedValues = {
+type TManageDataProvidedValues<T> = {
   currentIndex: number
-  currentRecords: TTemplateRecord[]
-  onDataChange: (data: TTemplateRecord[]) => void
+  currentRecords: T
+  onDataChange: (savedData: T) => void
 }
 
-type TProps = {
-  ocrData: TOcrResponse[]
-  template: TOcrTemplate
-  children: (props: TManageDataProvidedValues) => JSX.Element
+type TProps<T> = {
+  data: T[]
+  children: (props: TManageDataProvidedValues<T>) => JSX.Element
   onGoBack: () => void
-  onGoNext: (data: TOcrResponse[]) => void
+  onGoNext: (savedData: T[]) => void
+  title?: string
+  description?: string
   finishLabel?: string
   withFinishArrow?: boolean
 }
 
-const ManageDataWrapper = ({
-  ocrData,
+const ManageDataWrapper = <T,>({
+  data,
   children,
-  template,
+  title,
+  description,
   onGoBack,
   onGoNext,
   finishLabel,
   withFinishArrow = true,
-}: TProps) => {
+}: TProps<T>) => {
   const t = useTranslations()
 
-  const [data, setData] = useState<TOcrResponse[]>(ocrData)
+  const [savedData, setSavedData] = useState(data)
   const [currentIndex, setCurrentIndex] = useState(0)
 
-  const [currentRecords, setCurrentRecords] = useState<TTemplateRecord[]>(
-    data[currentIndex].records,
-  )
+  const [currentRecords, setCurrentRecords] = useState(savedData[currentIndex])
 
   const canGoBack = currentIndex > 0
-  const isLastItem = currentIndex >= data.length - 1
+  const isLastItem = currentIndex >= savedData.length - 1
 
   const moveToIndex = (index: number) => {
     if (index < 0) return
 
-    const newData = [...data]
-    newData[currentIndex] = { ...newData[currentIndex], records: [...currentRecords] }
+    const newData = [...savedData]
+    newData[currentIndex] = JSON.parse(JSON.stringify(currentRecords))
 
     if (index >= newData.length) {
       onGoNext(newData)
       return
     }
 
-    setCurrentRecords(newData[index].records)
+    setCurrentRecords(newData[index])
     setCurrentIndex(index)
 
-    setData(newData)
+    setSavedData(newData)
   }
 
   const Actions = ({ className }: { className?: string }) => (
     <div className={cn('flex items-center gap-2 ml-auto', className)}>
-      {data.length > 1 && (
+      {savedData.length > 1 && (
         <>
           <span className="text-muted-foreground text-sm font-bold">
-            ({currentIndex + 1}/{data.length})
+            ({currentIndex + 1}/{savedData.length})
           </span>
           <Button
             onClick={() => moveToIndex(currentIndex - 1)}
@@ -104,12 +103,12 @@ const ManageDataWrapper = ({
             <Button onClick={onGoBack} size="icon-sm" variant="ghost">
               <ArrowLeft />
             </Button>
-            <p>{template.name}</p>
+            {!!title && <p>{title}</p>}
           </div>
 
           <Actions className="self-start hidden sm:flex" />
         </CardTitle>
-        <CardDescription>{template.description}</CardDescription>
+        {!!description && <CardDescription>{description}</CardDescription>}
       </CardHeader>
       <CardContent className="overflow-hidden flex">
         {children({
