@@ -47,6 +47,7 @@ const ExportStepContent = ({ template, formatMethod, formattedData }: TExportSte
         ? formatMethod.getHeader(key)
         : (template.fields?.find((f) => f.key === key)?.label ?? key),
       accessorKey: key,
+      cell: ({ getValue }) => <p className="text-center">{getValue() as string}</p>,
     }))
   }, [formattedData, formatMethod, template])
 
@@ -64,7 +65,10 @@ const ExportStepContent = ({ template, formatMethod, formattedData }: TExportSte
               size="icon"
               variant="outline"
               onClick={() => {
-                const tsvData = exportToTsv(formattedData, formatMethod.columnsOrder)
+                const tsvData = exportToTsv(
+                  formattedData,
+                  formatMethod.exportColumnsOrder || formatMethod.columnsOrder,
+                )
                 copyToClipboard(tsvData)
                 toast.success('Values are copied to clipboard')
               }}

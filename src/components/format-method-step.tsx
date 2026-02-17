@@ -22,7 +22,10 @@ const FormatMethodStep = ({ template, defaultValue, onGoBack, onGoNext }: TProps
 
   const form = useForm({
     defaultValues: {
-      exportVariantId: defaultValue ?? template.exportVariants[0].id,
+      exportVariantId:
+        defaultValue ??
+        template.exportVariants.find((variant) => variant.isDefault)?.id ??
+        template.exportVariants[0].id,
     },
   })
 

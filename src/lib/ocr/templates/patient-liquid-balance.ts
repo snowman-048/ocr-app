@@ -21,6 +21,7 @@ type TDetectedDataOutput = {
 }
 
 type TParsedDataField =
+  | 'shift'
   | 'timeWindow'
   | 'intakePerOs'
   | 'intakeIv'
@@ -33,6 +34,7 @@ type TParsedDataField =
   | 'netBalance'
 
 const HEADER_MAP: Record<TParsedDataField, string> = {
+  shift: 'Shift',
   timeWindow: 'Time Window',
   intakePerOs: 'Intake per os',
   intakeIv: 'Intake i.v.',
@@ -250,8 +252,10 @@ const patientLiquidBalanceTemplate: TOcrTemplate = {
       name: 'Complete Multi-Shift Dataset',
       description: 'Grouped by time windows across multiple 24-hour shifts',
       isBatchExport: true,
+      isDefault: true,
       getHeader: (value) => HEADER_MAP[value as TParsedDataField] ?? value,
-      columnsOrder: completeDatasetColumns,
+      columnsOrder: ['shift', ...completeDatasetColumns],
+      exportColumnsOrder: completeDatasetColumns,
       formatData: (records) => processSingleDayData(records),
       formatBatchData: (allRecords) => {
         const allConverted = allRecords.map((shiftRecords) =>
@@ -269,6 +273,7 @@ const patientLiquidBalanceTemplate: TOcrTemplate = {
         // Process each sheet and generate time windows
         allConverted.forEach((sheetData, sheetIndex) => {
           const currentDay = sheetIndex + 1
+          const shift = currentDay
 
           // Shift N 0:00-6:00
           // Get hours 0-5 from PREVIOUS sheet (skip for first sheet)
@@ -276,7 +281,8 @@ const patientLiquidBalanceTemplate: TOcrTemplate = {
             const prevSheetData = allConverted[sheetIndex - 1]
             const rawData = filterDataByTimeWindow(prevSheetData, 0, 5)
             result.push({
-              timeWindow: `Shift ${currentDay} 0:00-6:00`,
+              shift,
+              timeWindow: `0:00-6:00`,
               ...calculateWindow(rawData),
             })
           }
@@ -287,7 +293,8 @@ const patientLiquidBalanceTemplate: TOcrTemplate = {
             // First sheet: only hours 7-11
             const rawData = filterDataByTimeWindow(sheetData, 7, 11)
             result.push({
-              timeWindow: `Shift ${currentDay} 6:00-12:00`,
+              shift,
+              timeWindow: `6:00-12:00`,
               ...calculateWindow(rawData),
             })
           } else {
@@ -296,7 +303,8 @@ const patientLiquidBalanceTemplate: TOcrTemplate = {
             const hour6 = prevSheetData.filter((record) => +record.hour === 6)
             const hours7to11 = filterDataByTimeWindow(sheetData, 7, 11)
             result.push({
-              timeWindow: `Shift ${currentDay} 6:00-12:00`,
+              shift,
+              timeWindow: `6:00-12:00`,
               ...calculateWindow([...hour6, ...hours7to11]),
             })
           }
@@ -305,7 +313,8 @@ const patientLiquidBalanceTemplate: TOcrTemplate = {
           // Hours 12-17 from current sheet
           const hours12to17 = filterDataByTimeWindow(sheetData, 12, 17)
           result.push({
-            timeWindow: `Shift ${currentDay} 12:00-18:00`,
+            shift,
+            timeWindow: `12:00-18:00`,
             ...calculateWindow(hours12to17),
           })
 
@@ -313,7 +322,8 @@ const patientLiquidBalanceTemplate: TOcrTemplate = {
           // Hours 18-23 from current sheet
           const hours18to23 = filterDataByTimeWindow(sheetData, 18, 23)
           result.push({
-            timeWindow: `Shift ${currentDay} 18:00-24:00`,
+            shift,
+            timeWindow: `18:00-24:00`,
             ...calculateWindow(hours18to23),
           })
         })
@@ -322,7 +332,8 @@ const patientLiquidBalanceTemplate: TOcrTemplate = {
         const lastSheetData = allConverted[allConverted.length - 1]
         const hours0to5 = filterDataByTimeWindow(lastSheetData, 0, 5)
         result.push({
-          timeWindow: `Shift ${allConverted.length + 1} 0:00-6:00`,
+          shift: allConverted.length + 1,
+          timeWindow: `0:00-6:00`,
           ...calculateWindow(hours0to5),
         })
 
