@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -152,7 +152,7 @@ const FileUploadStep = ({ defaultValues, onUploadComplete }: TProps) => {
             <FormField
               control={form.control}
               name="files"
-              render={({ field: { onChange, value, disabled, ...field } }) => (
+              render={({ field: { onChange: _, value, disabled, ...field } }) => (
                 <FormItem>
                   <FormLabel>{t('image_upload.form.select_image.label')}</FormLabel>
                   <FormControl>

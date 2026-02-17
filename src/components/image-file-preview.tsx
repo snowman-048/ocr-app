@@ -13,40 +13,62 @@ import {
 import { Spinner } from './ui/spinner'
 
 type TProps = {
-  files: File[]
+  files?: File[]
+  previews?: {
+    fileName?: string
+    preview: string
+  }[]
 }
 
-const ImageFilePreview = ({ files }: TProps) => {
-  const { previews } = useImageFilesPreviews(files)
+const ImageFilePreview = ({ files, previews: providedPreviews }: TProps) => {
+  const { previews: calculatedPreviews } = useImageFilesPreviews(
+    !providedPreviews ? files : undefined,
+  )
+
+  const previews =
+    providedPreviews ??
+    calculatedPreviews.map((preview, index) => ({
+      fileName: files?.[index]?.name,
+      preview,
+    }))
 
   if (!previews) return <Spinner className="mx-auto" />
+
+  const isMultipleItems = previews.length > 1 || (files?.length ?? 0) > 1
 
   return (
     <div className="flex items-center justify-center">
       <Carousel
         style={{
-          maxWidth: 'calc(100% - 80px)',
+          maxWidth: isMultipleItems ? 'calc(100% - 80px)' : '100%',
         }}
         opts={{ align: 'center' }}
       >
         <CarouselContent>
           {previews.map((preview, index) => {
-            const file = files?.[index]
             return (
               <CarouselItem key={index} className="my-auto">
                 <Card>
                   <CardContent>
-                    <img src={preview} alt={file?.name || 'Preview'} className="max-h-full" />
+                    <img
+                      src={preview.preview}
+                      alt={preview.fileName || 'Preview'}
+                      className="max-h-full"
+                    />
                   </CardContent>
-                  <CardFooter>{file?.name}</CardFooter>
+                  <CardFooter>{preview.fileName}</CardFooter>
                 </Card>
               </CarouselItem>
             )
           })}
         </CarouselContent>
 
-        <CarouselPrevious />
-        <CarouselNext />
+        {isMultipleItems && (
+          <>
+            <CarouselPrevious />
+            <CarouselNext />
+          </>
+        )}
       </Carousel>
     </div>
   )

@@ -24,15 +24,18 @@ type TManageDataProvidedValues<T> = {
   onDataChange: (savedData: T) => void
 }
 
+type TRenderFn<T> = (props: TManageDataProvidedValues<T>) => JSX.Element
+
 type TProps<T> = {
   data: T[]
-  children: (props: TManageDataProvidedValues<T>) => JSX.Element
+  children: TRenderFn<T>
   onGoBack: () => void
   onGoNext: (savedData: T[]) => void
   title?: string
   description?: string
   finishLabel?: string
   withFinishArrow?: boolean
+  renderTitleAddon?: TRenderFn<T>
 }
 
 const ManageDataWrapper = <T,>({
@@ -44,6 +47,7 @@ const ManageDataWrapper = <T,>({
   onGoNext,
   finishLabel,
   withFinishArrow = true,
+  renderTitleAddon,
 }: TProps<T>) => {
   const t = useTranslations()
 
@@ -95,6 +99,12 @@ const ManageDataWrapper = <T,>({
     </div>
   )
 
+  const fnProps = {
+    currentIndex,
+    currentRecords,
+    onDataChange: setCurrentRecords,
+  }
+
   return (
     <Card className="max-h-full overflow-hidden">
       <CardHeader>
@@ -104,19 +114,14 @@ const ManageDataWrapper = <T,>({
               <ArrowLeft />
             </Button>
             {!!title && <p>{title}</p>}
+            {renderTitleAddon?.(fnProps)}
           </div>
 
           <Actions className="self-start hidden sm:flex" />
         </CardTitle>
         {!!description && <CardDescription>{description}</CardDescription>}
       </CardHeader>
-      <CardContent className="overflow-hidden flex">
-        {children({
-          currentIndex,
-          currentRecords,
-          onDataChange: setCurrentRecords,
-        })}
-      </CardContent>
+      <CardContent className="overflow-hidden flex">{children(fnProps)}</CardContent>
       <CardFooter className="sm:invisible sm:p-0 flex">
         <Actions className="sm:hidden flex" />
       </CardFooter>

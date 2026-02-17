@@ -129,18 +129,24 @@ const SortableImageFilesList = <T extends File>({ items, onSave, onClose }: TPro
   }
 
   return (
-    <div className="space-y-4">
-      <ScrollArea>
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={sortedItems} strategy={verticalListSortingStrategy}>
-            <div className="space-y-2">
-              {sortedItems.map((item) => (
-                <SortableItem key={item.id} item={item} />
-              ))}
-            </div>
-          </SortableContext>
-        </DndContext>
-      </ScrollArea>
+    <div className="overflow-hidden max-h-full flex flex-col gap-4">
+      <div className="overflow-hidden flex">
+        <ScrollArea>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext items={sortedItems} strategy={verticalListSortingStrategy}>
+              <div className="space-y-2">
+                {sortedItems.map((item) => (
+                  <SortableItem key={item.id} item={item} />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
+        </ScrollArea>
+      </div>
 
       <div className="flex gap-2">
         <Button onClick={handleSave} className="flex-1">

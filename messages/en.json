@@ -1,7 +1,7 @@
 {
   "image_upload": {
     "title": "Image Upload",
-    "description": "Upload an image to start processing it",
+    "description": "Upload images to start processing them",
     "preview": {
       "title": "Preview",
       "description": "Preview of the uploaded images"

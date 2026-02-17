@@ -49,7 +49,7 @@ const ModalProvider = ({ children }: { children: ReactNode }) => {
     >
       {children}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-150 min-w-fit max-h-[calc(100%-2rem)] overflow-y-auto">
+        <DialogContent className="sm:max-w-150 max-h-[calc(100%-2rem)] overflow-y-auto flex flex-col">
           <DialogHeader>
             {options.title && (
               <DialogTitle className="text-lg flex items-center gap-2">

@@ -34,8 +34,8 @@ const MainPage = () => {
   const template = useMemo(() => getOcrTemplate(fileUploadValues?.templateType), [fileUploadValues])
   const isSingleExportFormat = useMemo(() => template.exportVariants.length === 1, [template])
 
-  const setStep = (step: EStep) => {
-    router.push(`${pathname}?step=${step}`)
+  const setStep = (step: EStep, replace = false) => {
+    ;(replace ? router.replace : router.push)(`${pathname}?step=${step}`)
   }
 
   useEffect(() => {
@@ -60,8 +60,9 @@ const MainPage = () => {
         <DataReviewStep
           data={currentOcrData}
           template={template}
+          files={fileUploadValues?.files}
           onGoBack={() => {
-            setStep(EStep.FILE_UPLOAD)
+            setStep(EStep.FILE_UPLOAD, true)
             setCurentOcrData(null)
           }}
           onGoNext={(newData) => {
@@ -97,16 +98,16 @@ const MainPage = () => {
           formatMethodId={formatMethodId}
           onGoBack={() => {
             if (isSingleExportFormat) {
-              setStep(EStep.DYNAMIC_DATA_TABLE)
+              setStep(EStep.DYNAMIC_DATA_TABLE, true)
             } else {
-              setStep(EStep.FORMAT_METHOD)
+              setStep(EStep.FORMAT_METHOD, true)
             }
           }}
           onGoNext={() => {
             setFileUploadValues((prev) => (prev ? { ...prev, files: [] } : null))
             setCurentOcrData(null)
             setFormatMethodId(null)
-            setStep(EStep.FILE_UPLOAD)
+            setStep(EStep.FILE_UPLOAD, true)
           }}
         />
       )}
