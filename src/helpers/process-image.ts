@@ -5,7 +5,7 @@ import { EImageQuality } from '@/enums/image-quality'
 const processImage = async (buffer: Buffer) => {
   const metadata = await sharp(buffer).metadata()
 
-  let processedImage = sharp(buffer)
+  const processedImage = sharp(buffer)
     .resize(2000, 2000, {
       fit: 'inside',
       withoutEnlargement: true,

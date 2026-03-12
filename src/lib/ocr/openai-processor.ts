@@ -5,9 +5,13 @@ import { TOcrTemplate, TTemplateRecord, TTemplateType, getOcrTemplate } from './
 import { FREEFORM_TEMPLATE_TYPE } from './templates/freeform'
 import { TOcrAiConsumption } from './types'
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
+let _openai: OpenAI | null = null
+const getOpenAI = () => {
+  if (!_openai) {
+    _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  }
+  return _openai
+}
 
 type TProps = {
   base64Image: string
@@ -138,7 +142,7 @@ const processWithOpenAI = async ({ base64Image, templateType }: TProps) => {
     prompt = getStructuredPrompt(template)
   }
   try {
-    const response = await openai.chat.completions.create({
+    const response = await getOpenAI().chat.completions.create({
       model: 'gpt-4.1-mini',
       messages: [
         {
