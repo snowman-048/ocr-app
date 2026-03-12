@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono, Inter } from 'next/font/google'
-
-import { DEFAULT_LOCALE } from '@/i18n/locale.config'
+import { getLocale } from 'next-intl/server'
 
 import './globals.css'
 
@@ -21,17 +20,11 @@ export const metadata: Metadata = {
   title: 'Journal OCR App',
 }
 
-const RootLayout = async ({
-  children,
-  params,
-}: {
-  children: React.ReactNode
-  params: Promise<{ locale: string }>
-}) => {
-  const { locale } = await params
+const RootLayout = async ({ children }: { children: React.ReactNode }) => {
+  const locale = await getLocale()
 
   return (
-    <html lang={locale || DEFAULT_LOCALE} suppressHydrationWarning className={inter.variable}>
+    <html lang={locale} suppressHydrationWarning className={inter.variable}>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>{children}</body>
     </html>
   )
