@@ -18,7 +18,8 @@
         "no_files": "No Files Selected"
       },
       "processing_method": {
-        "label": "Processing Method"
+        "label": "Processing Method",
+        "powered_by": "Powered by {provider}"
       },
       "template_type": {
         "label": "Template"
@@ -30,11 +31,17 @@
     "finish_validation": "Finish Validation",
     "next_item": "Next Item"
   },
+  "data_review": {
+    "low_quality_warning": "Low quality source image — results may be less accurate. Please verify carefully."
+  },
   "format_method": {
     "label": "Export Format Method"
   },
   "export": {
-    "export_to_tsv": "Export to TSV"
+    "export_to_tsv": "Export to TSV",
+    "export_to_csv": "Export to CSV",
+    "download_file": "Download File",
+    "copied_to_clipboard": "Values are copied to clipboard"
   },
   "validation": {
     "required": "This field is required",
@@ -47,6 +54,11 @@
     "success": {
       "visual_detection": "Visual detection was completed successfully in {time} seconds",
       "files_reordered": "Files were reordered successfully"
+    },
+    "error": {
+      "partial_upload_failure": "{failed} of {total} files failed to process",
+      "all_uploads_failed": "All files failed to process. Please try again.",
+      "processing_failed": "Processing failed. Please try again."
     }
   },
   "common": {
@@ -55,6 +67,21 @@
     "cancel": "Cancel",
     "next_item": "Next Item",
     "next_step": "Next Step",
-    "previous": "Previous"
+    "previous": "Previous",
+    "go_back": "Go Back",
+    "finish": "Finish"
+  },
+  "steps": {
+    "upload": "Upload",
+    "review": "Review",
+    "format": "Format",
+    "export": "Export"
+  },
+  "tokens": {
+    "usage": "Token Usage",
+    "input": "Input",
+    "output": "Output",
+    "cached": "Cached",
+    "total": "Total"
   }
 }

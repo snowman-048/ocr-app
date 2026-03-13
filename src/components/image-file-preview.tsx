@@ -52,7 +52,7 @@ const ImageFilePreview = ({ files, previews: providedPreviews }: TProps) => {
                   <CardContent>
                     <img
                       src={preview.preview}
-                      alt={preview.fileName || 'Preview'}
+                      alt={preview.fileName ? `Preview of uploaded file: ${preview.fileName}` : 'Image preview'}
                       className="max-h-full"
                     />
                   </CardContent>

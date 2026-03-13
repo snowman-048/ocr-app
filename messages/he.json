@@ -1,0 +1,87 @@
+{
+  "image_upload": {
+    "title": "העלאת תמונה",
+    "description": "העלה תמונות כדי להתחיל לעבד אותן",
+    "preview": {
+      "title": "תצוגה מקדימה",
+      "description": "תצוגה מקדימה של התמונות שהועלו"
+    },
+    "reorder": {
+      "title": "סידור מחדש",
+      "description": "סדר מחדש את התמונות שהועלו",
+      "save_order": "שמור סדר"
+    },
+    "form": {
+      "select_image": {
+        "label": "בחר תמונה",
+        "selected_files": "נבחרו {amount} קבצים",
+        "no_files": "לא נבחרו קבצים"
+      },
+      "processing_method": {
+        "label": "שיטת עיבוד",
+        "powered_by": "מופעל על ידי {provider}"
+      },
+      "template_type": {
+        "label": "תבנית"
+      },
+      "submit": "התחל עיבוד"
+    }
+  },
+  "ocr_validation": {
+    "finish_validation": "סיים אימות",
+    "next_item": "פריט הבא"
+  },
+  "data_review": {
+    "low_quality_warning": "תמונת מקור באיכות נמוכה — התוצאות עלולות להיות פחות מדויקות. אנא בדוק בקפידה."
+  },
+  "format_method": {
+    "label": "שיטת פורמט לייצוא"
+  },
+  "export": {
+    "export_to_tsv": "ייצוא ל-TSV",
+    "export_to_csv": "ייצוא ל-CSV",
+    "download_file": "הורד קובץ",
+    "copied_to_clipboard": "הערכים הועתקו ללוח"
+  },
+  "validation": {
+    "required": "שדה זה הוא חובה",
+    "select_at_least": "אנא בחר לפחות {amount} פריט(ים)",
+    "select_at_most": "אנא בחר לכל היותר {amount} פריט(ים)",
+    "big_file": "הקובץ חייב להיות קטן מ-{size} MB",
+    "file_type": "רק הקבצים הבאים מותרים: {files}"
+  },
+  "toast": {
+    "success": {
+      "visual_detection": "הזיהוי החזותי הושלם בהצלחה תוך {time} שניות",
+      "files_reordered": "הקבצים סודרו מחדש בהצלחה"
+    },
+    "error": {
+      "partial_upload_failure": "{failed} מתוך {total} קבצים נכשלו בעיבוד",
+      "all_uploads_failed": "כל הקבצים נכשלו בעיבוד. אנא נסה שוב.",
+      "processing_failed": "העיבוד נכשל. אנא נסה שוב."
+    }
+  },
+  "common": {
+    "no_data": "אין נתונים",
+    "next": "הבא",
+    "cancel": "ביטול",
+    "next_item": "פריט הבא",
+    "next_step": "שלב הבא",
+    "previous": "הקודם",
+    "go_back": "חזור",
+    "finish": "סיום"
+  },
+  "steps": {
+    "upload": "העלאה",
+    "review": "סקירה",
+    "format": "פורמט",
+    "export": "ייצוא"
+  },
+  "tokens": {
+    "usage": "צריכת טוקנים",
+    "input": "קלט",
+    "output": "פלט",
+    "cached": "מטמון",
+    "total": "סה\"כ"
+  }
+}

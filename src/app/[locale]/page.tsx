@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 
@@ -9,7 +9,9 @@ import { DataReviewStep } from '@/components/data-review-step'
 import { ExportStep } from '@/components/export-step'
 import { FileUploadStep, TFileUploadFormValues } from '@/components/file-upload-step'
 import { FormatMethodStep } from '@/components/format-method-step'
-import { getOcrTemplate } from '@/lib/ocr/templates'
+import { StepProgress } from '@/components/step-progress'
+import { useSessionStorage } from '@/hooks/use-session-storage'
+import { TTemplateType, getOcrTemplate } from '@/lib/ocr/templates'
 
 enum EStep {
   FILE_UPLOAD = 'file-upload',
@@ -20,57 +22,131 @@ enum EStep {
 
 const STEP_QUERY_KEY = 'step'
 
+const WIZARD_STEPS = [
+  { id: EStep.FILE_UPLOAD, labelKey: 'steps.upload' },
+  { id: EStep.DYNAMIC_DATA_TABLE, labelKey: 'steps.review' },
+  { id: EStep.FORMAT_METHOD, labelKey: 'steps.format' },
+  { id: EStep.EXPORT, labelKey: 'steps.export' },
+]
+
 const MainPage = () => {
   const [fileUploadValues, setFileUploadValues] = useState<TFileUploadFormValues | null>(null)
-  const [currentOcrData, setCurentOcrData] = useState<TOcrResponse[] | null>(null)
-  const [formatMethodId, setFormatMethodId] = useState<string | null>(null)
+  const [currentOcrData, setCurrentOcrData, clearOcrData] = useSessionStorage<
+    TOcrResponse[] | null
+  >('ocr-results', null)
+  const [formatMethodId, setFormatMethodId, clearFormatMethod] = useSessionStorage<string | null>(
+    'format-method',
+    null,
+  )
+  const [templateType, setTemplateType, clearTemplateType] = useSessionStorage<string | null>(
+    'template-type',
+    null,
+  )
+
+  // Internal state as source of truth
+  const [step, setStepInternal] = useState<EStep>(EStep.FILE_UPLOAD)
+  const isInitialized = useRef(false)
 
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
-  const step = searchParams.get(STEP_QUERY_KEY) || EStep.FILE_UPLOAD
-
-  const template = useMemo(() => getOcrTemplate(fileUploadValues?.templateType), [fileUploadValues])
+  const template = useMemo(
+    () =>
+      getOcrTemplate(
+        (fileUploadValues?.templateType ?? templateType ?? undefined) as TTemplateType | undefined,
+      ),
+    [fileUploadValues, templateType],
+  )
   const isSingleExportFormat = useMemo(() => template.exportVariants.length === 1, [template])
 
-  const setStep = (step: EStep, replace = false) => {
-    ;(replace ? router.replace : router.push)(`${pathname}?step=${step}`)
-  }
+  const hasData = !!currentOcrData?.length
 
+  const setStep = useCallback(
+    (newStep: EStep, replace = false) => {
+      setStepInternal(newStep)
+      ;(replace ? router.replace : router.push)(`${pathname}?step=${newStep}`)
+    },
+    [router, pathname],
+  )
+
+  // Initialize from URL on mount only
   useEffect(() => {
-    if (step !== EStep.FILE_UPLOAD && !currentOcrData) {
-      setStep(EStep.FILE_UPLOAD)
+    if (isInitialized.current) return
+    isInitialized.current = true
+
+    const urlStep = searchParams.get(STEP_QUERY_KEY) as EStep | null
+    if (urlStep && urlStep !== EStep.FILE_UPLOAD && hasData) {
+      setStepInternal(urlStep)
+    } else if (urlStep && urlStep !== EStep.FILE_UPLOAD && !hasData) {
+      // Can't restore step without data, reset to upload
+      router.replace(`${pathname}?step=${EStep.FILE_UPLOAD}`)
     }
-  }, [router, step])
+  }, [])
+
+  // Sync URL changes (back/forward) to internal state
+  useEffect(() => {
+    if (!isInitialized.current) return
+
+    const urlStep = searchParams.get(STEP_QUERY_KEY) as EStep | null
+    if (!urlStep) return
+
+    // If navigating to a step that requires data but there's none, redirect
+    if (urlStep !== EStep.FILE_UPLOAD && !hasData) {
+      router.replace(`${pathname}?step=${EStep.FILE_UPLOAD}`)
+      setStepInternal(EStep.FILE_UPLOAD)
+      return
+    }
+
+    setStepInternal(urlStep)
+  }, [searchParams])
+
+  // Warn before leaving with unsaved data
+  useEffect(() => {
+    if (!hasData || step === EStep.FILE_UPLOAD) return
+
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+    }
+
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [hasData, step])
 
   return (
-    <div className="flex items-center justify-center w-full h-full overflow-hidden p-4">
+    <div className="flex flex-col items-center justify-center w-full h-full overflow-hidden p-4 gap-4">
+      {step !== EStep.FILE_UPLOAD && (
+        <div className="w-full max-w-2xl">
+          <StepProgress steps={WIZARD_STEPS} currentStepId={step} />
+        </div>
+      )}
       {step === EStep.FILE_UPLOAD && (
         <FileUploadStep
           defaultValues={fileUploadValues}
           onUploadComplete={(data, values) => {
-            setCurentOcrData(data)
+            setCurrentOcrData(data)
             setFileUploadValues(values)
+            setTemplateType(values.templateType)
             setStep(EStep.DYNAMIC_DATA_TABLE)
           }}
         />
       )}
-      {step === EStep.DYNAMIC_DATA_TABLE && !!currentOcrData?.length && (
+      {step === EStep.DYNAMIC_DATA_TABLE && hasData && (
         <DataReviewStep
           data={currentOcrData}
           template={template}
           files={fileUploadValues?.files}
           onGoBack={() => {
             setStep(EStep.FILE_UPLOAD, true)
-            setCurentOcrData(null)
+            clearOcrData()
+            clearTemplateType()
           }}
           onGoNext={(newData) => {
             const formatted = [...currentOcrData].map((item, index) => ({
               ...item,
               records: newData[index],
             }))
-            setCurentOcrData(formatted)
+            setCurrentOcrData(formatted)
             if (isSingleExportFormat) {
               setFormatMethodId(template.exportVariants[0].id)
               setStep(EStep.EXPORT)
@@ -91,7 +167,7 @@ const MainPage = () => {
           }}
         />
       )}
-      {step === EStep.EXPORT && !!formatMethodId && !!currentOcrData?.length && (
+      {step === EStep.EXPORT && !!formatMethodId && hasData && (
         <ExportStep
           data={currentOcrData}
           template={template}
@@ -105,8 +181,9 @@ const MainPage = () => {
           }}
           onGoNext={() => {
             setFileUploadValues((prev) => (prev ? { ...prev, files: [] } : null))
-            setCurentOcrData(null)
-            setFormatMethodId(null)
+            clearOcrData()
+            clearFormatMethod()
+            clearTemplateType()
             setStep(EStep.FILE_UPLOAD, true)
           }}
         />

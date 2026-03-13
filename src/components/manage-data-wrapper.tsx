@@ -77,7 +77,7 @@ const ManageDataWrapper = <T,>({
   }
 
   const Actions = ({ className }: { className?: string }) => (
-    <div className={cn('flex items-center gap-2 ml-auto', className)}>
+    <div className={cn('flex items-center gap-2 ml-auto flex-wrap justify-end', className)}>
       {savedData.length > 1 && (
         <>
           <span className="text-muted-foreground text-sm font-bold">
@@ -87,12 +87,13 @@ const ManageDataWrapper = <T,>({
             onClick={() => moveToIndex(currentIndex - 1)}
             variant="outline"
             disabled={!canGoBack}
+            className="flex-1 sm:flex-none"
           >
             <ArrowLeft /> {t('common.previous')}
           </Button>
         </>
       )}
-      <Button onClick={() => moveToIndex(currentIndex + 1)}>
+      <Button onClick={() => moveToIndex(currentIndex + 1)} className="flex-1 sm:flex-none">
         {isLastItem ? (finishLabel ?? t('common.next_step')) : t('common.next_item')}
         {(!isLastItem || withFinishArrow) && <ArrowRight />}
       </Button>
@@ -106,7 +107,7 @@ const ManageDataWrapper = <T,>({
   }
 
   return (
-    <Card className="max-h-full overflow-hidden">
+    <Card className="max-h-full max-w-full overflow-hidden">
       <CardHeader>
         <CardTitle className="flex-row flex items-center">
           <div className="flex items-center gap-1">
@@ -121,7 +122,7 @@ const ManageDataWrapper = <T,>({
         </CardTitle>
         {!!description && <CardDescription>{description}</CardDescription>}
       </CardHeader>
-      <CardContent className="overflow-hidden flex">{children(fnProps)}</CardContent>
+      <CardContent className="overflow-hidden flex min-w-0">{children(fnProps)}</CardContent>
       <CardFooter className="sm:invisible sm:p-0 flex">
         <Actions className="sm:hidden flex" />
       </CardFooter>

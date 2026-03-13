@@ -28,6 +28,8 @@ type TOcrTemplate = {
   name: string
   description: string
   expectedRowCount?: number
+  imageDetail?: 'low' | 'high' | 'auto'
+  maxCompletionTokens?: number
   schema?: z.ZodSchema
   fields?: {
     key: string

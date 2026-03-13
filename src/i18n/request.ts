@@ -1,18 +1,25 @@
 import { getRequestConfig } from 'next-intl/server'
 import { cookies } from 'next/headers'
 
-
 import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from './locale.config'
 import { ELocale } from './locale.enum'
 import { ECookieKey } from '@/enums/cookie-key'
 
-export default getRequestConfig(async () => {
-  const store = await cookies()
-  let locale = store.get(ECookieKey.LOCALE)?.value
+const isSupported = (value?: string): value is ELocale =>
+  !!value && SUPPORTED_LOCALES.includes(value as ELocale)
 
-  if (!locale || !SUPPORTED_LOCALES.includes(locale as ELocale)) {
-    locale = DEFAULT_LOCALE
-  }
+export default getRequestConfig(async ({ requestLocale }) => {
+  // Priority: URL segment (from middleware) > cookie > default
+  const urlLocale = await requestLocale
+
+  const store = await cookies()
+  const cookieLocale = store.get(ECookieKey.LOCALE)?.value
+
+  const locale = isSupported(urlLocale)
+    ? urlLocale
+    : isSupported(cookieLocale)
+      ? cookieLocale
+      : DEFAULT_LOCALE
 
   return {
     locale,

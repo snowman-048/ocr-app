@@ -137,6 +137,8 @@ const patientLiquidBalanceTemplate: TOcrTemplate = {
   name: 'Patient Liquid Balance',
   description: `Structured log of a patient's liquid balance for a 24-hour shift`,
   expectedRowCount: NUMBER_OF_ROWS,
+  imageDetail: 'high',
+  maxCompletionTokens: 3000,
   ocrMethodMeta: {
     [EOcrMethod.OPENAI]: {
       extractionRules: [

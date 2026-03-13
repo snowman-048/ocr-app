@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/select'
 import { EOcrMethod } from '@/lib/ocr/enums'
 import { getAllOcrTemplates } from '@/lib/ocr/templates'
+import { cn } from '@/lib/utils'
 import { useModal } from '@/providers/modal-provider'
 import { createUploadFileSchema } from '@/schemas/file-upload'
 
@@ -32,6 +33,36 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Separator } from './ui/separator'
 import { Spinner } from './ui/spinner'
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
+
+type TFileStatus = 'queued' | 'processing' | 'done' | 'failed'
+
+type TFileProgress = {
+  name: string
+  status: TFileStatus
+}
+
+const FileProgressIndicator = ({ files }: { files: TFileProgress[] }) => {
+  if (!files.length) return null
+
+  return (
+    <div className="space-y-1.5">
+      {files.map((file, i) => (
+        <div key={i} className="flex items-center gap-2 text-xs">
+          <span
+            className={cn(
+              'h-2 w-2 rounded-full shrink-0',
+              file.status === 'queued' && 'bg-muted-foreground',
+              file.status === 'processing' && 'bg-blue-500 animate-pulse',
+              file.status === 'done' && 'bg-green-500',
+              file.status === 'failed' && 'bg-red-500',
+            )}
+          />
+          <span className="truncate text-muted-foreground">{file.name}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
 
 type TFormValues = z.infer<ReturnType<typeof createUploadFileSchema>>
 
@@ -53,6 +84,7 @@ const FileUploadStep = ({ defaultValues, onUploadComplete }: TProps) => {
   const t = useTranslations()
 
   const [isPending, setIsPending] = useState(false)
+  const [fileProgress, setFileProgress] = useState<TFileProgress[]>([])
 
   const { openModal, closeModal } = useModal()
   const { mutateAsync: uploadImageForOcr } = useUploadImageForOcr()
@@ -81,7 +113,10 @@ const FileUploadStep = ({ defaultValues, onUploadComplete }: TProps) => {
 
     openModal(
       <SortableImageFilesList
-        items={files.map((file, index) => ({ id: `${file}-${index}`, data: file }))}
+        items={files.map((file, index) => ({
+          id: `${file.name}-${file.size}-${index}`,
+          data: file,
+        }))}
         onSave={(reorderedFiles) => {
           form.setValue(
             'files',
@@ -93,8 +128,8 @@ const FileUploadStep = ({ defaultValues, onUploadComplete }: TProps) => {
         onClose={closeModal}
       />,
       {
-        title: 'Reorder Files',
-        description: 'Change the processing order of your images',
+        title: t('image_upload.reorder.title'),
+        description: t('image_upload.reorder.description'),
       },
     )
   }
@@ -107,19 +142,69 @@ const FileUploadStep = ({ defaultValues, onUploadComplete }: TProps) => {
   const onSubmit = async (data: TFormValues) => {
     setIsPending(true)
 
+    const initialProgress: TFileProgress[] = data.files.map((file) => ({
+      name: file.name,
+      status: 'queued',
+    }))
+    setFileProgress(initialProgress)
+
+    const updateFileStatus = (index: number, status: TFileStatus) => {
+      setFileProgress((prev) => prev.map((f, i) => (i === index ? { ...f, status } : f)))
+    }
+
     try {
-      const res = await Promise.all(
-        data.files.map((file) => {
+      // Process files with concurrency limit of 5
+      const MAX_CONCURRENT = 5
+      const results: PromiseSettledResult<Awaited<ReturnType<typeof uploadImageForOcr>>>[] = []
+      const queue = [...data.files.map((file, index) => ({ file, index }))]
+
+      const processFile = async (file: File, index: number) => {
+        updateFileStatus(index, 'processing')
+        try {
           const formData = new FormData()
           formData.append('file', file)
           formData.append('method', data.method)
           formData.append('templateType', data.templateType)
 
-          return uploadImageForOcr(formData)
-        }),
-      )
+          const result = await uploadImageForOcr(formData)
+          updateFileStatus(index, 'done')
+          results[index] = { status: 'fulfilled', value: result }
+        } catch (error) {
+          updateFileStatus(index, 'failed')
+          results[index] = { status: 'rejected', reason: error }
+        }
+      }
 
-      const longestTime = res.reduce((acc, item) => {
+      // Process in batches of MAX_CONCURRENT
+      while (queue.length > 0) {
+        const batch = queue.splice(0, MAX_CONCURRENT)
+        await Promise.all(batch.map(({ file, index }) => processFile(file, index)))
+      }
+
+      const succeeded = results
+        .filter(
+          (r): r is PromiseFulfilledResult<Awaited<ReturnType<typeof uploadImageForOcr>>> =>
+            r.status === 'fulfilled',
+        )
+        .map((r) => r.value)
+
+      const failedCount = results.filter((r) => r.status === 'rejected').length
+
+      if (failedCount > 0) {
+        toast.error(
+          t('toast.error.partial_upload_failure', {
+            failed: failedCount,
+            total: data.files.length,
+          }),
+        )
+      }
+
+      if (!succeeded.length) {
+        toast.error(t('toast.error.all_uploads_failed'))
+        return
+      }
+
+      const longestTime = succeeded.reduce((acc, item) => {
         return acc.data.processingTime > item.data.processingTime ? acc : item
       }).data.processingTime
 
@@ -130,13 +215,14 @@ const FileUploadStep = ({ defaultValues, onUploadComplete }: TProps) => {
       )
 
       onUploadComplete?.(
-        res.map((r) => r.data),
-        data,
+        succeeded.map((r) => r.data),
+        { ...data, files: data.files.filter((_, i) => results[i].status === 'fulfilled') },
       )
     } catch (error) {
       console.error(error)
     } finally {
       setIsPending(false)
+      setFileProgress([])
     }
   }
 
@@ -180,6 +266,7 @@ const FileUploadStep = ({ defaultValues, onUploadComplete }: TProps) => {
                             <Button
                               size="icon"
                               type="button"
+                              aria-label={t('image_upload.reorder.title')}
                               disabled={!value?.length || value.length < 2 || isPending}
                               onClick={() => onReorderFiles(value)}
                             >
@@ -195,6 +282,7 @@ const FileUploadStep = ({ defaultValues, onUploadComplete }: TProps) => {
                             <Button
                               size="icon"
                               type="button"
+                              aria-label={t('image_upload.preview.title')}
                               disabled={!value?.length}
                               onClick={() => onPreview(value)}
                             >
@@ -262,6 +350,8 @@ const FileUploadStep = ({ defaultValues, onUploadComplete }: TProps) => {
             />
 
             <Separator />
+
+            {isPending && fileProgress.length > 0 && <FileProgressIndicator files={fileProgress} />}
 
             <Button type="submit" className="w-full" disabled={form.formState.disabled}>
               {isPending && <Spinner />}

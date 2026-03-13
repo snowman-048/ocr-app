@@ -5,7 +5,10 @@ import { createOcrCellSchema, createOcrRecordSchema } from '../schemas'
 import { defaultExportVariant } from './lib/export-variants'
 
 const freeformRecordSchema = createOcrRecordSchema([
-  createOcrCellSchema({ key: z.string(), value: z.unknown() }),
+  createOcrCellSchema({
+    key: z.string().min(1),
+    value: z.union([z.string(), z.number(), z.null()]),
+  }),
 ])
 
 const FREEFORM_TEMPLATE_TYPE = 'freeform'

@@ -36,7 +36,7 @@ const FormatMethodStep = ({ template, defaultValue, onGoBack, onGoNext }: TProps
   return (
     <Card className="max-w-lg w-full">
       <CardHeader>
-        <CardTitle className="gap-1">
+        <CardTitle className="flex items-center gap-1">
           <Button onClick={onGoBack} size="icon-sm" variant="ghost">
             <ArrowLeft />
           </Button>

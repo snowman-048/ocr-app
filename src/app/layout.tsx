@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono, Inter } from 'next/font/google'
 import { getLocale } from 'next-intl/server'
 
@@ -20,11 +20,18 @@ export const metadata: Metadata = {
   title: 'Journal OCR App',
 }
 
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+}
+
 const RootLayout = async ({ children }: { children: React.ReactNode }) => {
   const locale = await getLocale()
+  const dir = locale === 'he' ? 'rtl' : 'ltr'
 
   return (
-    <html lang={locale} suppressHydrationWarning className={inter.variable}>
+    <html lang={locale} dir={dir} suppressHydrationWarning className={inter.variable}>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>{children}</body>
     </html>
   )

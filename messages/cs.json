@@ -1,0 +1,87 @@
+{
+  "image_upload": {
+    "title": "Nahrání obrázků",
+    "description": "Nahrajte obrázky pro zahájení zpracování",
+    "preview": {
+      "title": "Náhled",
+      "description": "Náhled nahraných obrázků"
+    },
+    "reorder": {
+      "title": "Změnit pořadí",
+      "description": "Změňte pořadí nahraných obrázků",
+      "save_order": "Uložit pořadí"
+    },
+    "form": {
+      "select_image": {
+        "label": "Vybrat obrázek",
+        "selected_files": "Vybráno {amount} souborů",
+        "no_files": "Žádné soubory nevybrány"
+      },
+      "processing_method": {
+        "label": "Metoda zpracování",
+        "powered_by": "Využívá {provider}"
+      },
+      "template_type": {
+        "label": "Šablona"
+      },
+      "submit": "Zahájit zpracování"
+    }
+  },
+  "ocr_validation": {
+    "finish_validation": "Dokončit validaci",
+    "next_item": "Další položka"
+  },
+  "data_review": {
+    "low_quality_warning": "Zdrojový obrázek nízké kvality — výsledky mohou být méně přesné. Pečlivě zkontrolujte."
+  },
+  "format_method": {
+    "label": "Formát exportu"
+  },
+  "export": {
+    "export_to_tsv": "Exportovat do TSV",
+    "export_to_csv": "Exportovat do CSV",
+    "download_file": "Stáhnout soubor",
+    "copied_to_clipboard": "Hodnoty byly zkopírovány do schránky"
+  },
+  "validation": {
+    "required": "Toto pole je povinné",
+    "select_at_least": "Vyberte alespoň {amount} položek",
+    "select_at_most": "Vyberte nejvýše {amount} položek",
+    "big_file": "Soubor musí být menší než {size} MB",
+    "file_type": "Povoleny jsou pouze následující soubory: {files}"
+  },
+  "toast": {
+    "success": {
+      "visual_detection": "Vizuální detekce byla úspěšně dokončena za {time} sekund",
+      "files_reordered": "Pořadí souborů bylo úspěšně změněno"
+    },
+    "error": {
+      "partial_upload_failure": "{failed} z {total} souborů se nepodařilo zpracovat",
+      "all_uploads_failed": "Zpracování všech souborů selhalo. Zkuste to prosím znovu.",
+      "processing_failed": "Zpracování selhalo. Zkuste to prosím znovu."
+    }
+  },
+  "common": {
+    "no_data": "Žádná data",
+    "next": "Další",
+    "cancel": "Zrušit",
+    "next_item": "Další položka",
+    "next_step": "Další krok",
+    "previous": "Předchozí",
+    "go_back": "Zpět",
+    "finish": "Dokončit"
+  },
+  "steps": {
+    "upload": "Nahrání",
+    "review": "Kontrola",
+    "format": "Formát",
+    "export": "Export"
+  },
+  "tokens": {
+    "usage": "Spotřeba tokenů",
+    "input": "Vstup",
+    "output": "Výstup",
+    "cached": "Z cache",
+    "total": "Celkem"
+  }
+}

@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
@@ -19,14 +20,13 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVertical } from 'lucide-react'
+import { ArrowDown, ArrowUp, GripVertical } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 
 import { Button } from '@/components/ui/button'
 import { useImageFilesPreviews } from '@/hooks/use-image-files-previews'
 
 import { Item, ItemContent, ItemMedia, ItemTitle } from './ui/item'
-import { ScrollArea } from './ui/scroll-area'
 import { Spinner } from './ui/spinner'
 
 type TSortableItem<T> = {
@@ -43,15 +43,25 @@ type TProps<T> = {
 
 type TSortableItemProps<T> = {
   item: TSortableItem<T>
+  index: number
+  total: number
+  onMoveUp: (index: number) => void
+  onMoveDown: (index: number) => void
 }
 
-const SortableItem = <T extends File>({ item }: TSortableItemProps<T>) => {
+const SortableItem = <T extends File>({
+  item,
+  index,
+  total,
+  onMoveUp,
+  onMoveDown,
+}: TSortableItemProps<T>) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
   })
 
   const style = {
-    transform: CSS.Transform.toString(transform),
+    transform: CSS.Transform.toString(transform ? { ...transform, x: 0 } : null),
     transition,
     opacity: isDragging ? 0.5 : 1,
   }
@@ -69,10 +79,38 @@ const SortableItem = <T extends File>({ item }: TSortableItemProps<T>) => {
       </ItemMedia>
       <ItemContent className="flex-row gap-4 items-center">
         {!!item.preview && (
-          <img src={item.preview} alt={item.data.name || 'Reorder Preview'} className="max-h-64" />
+          <img
+            src={item.preview}
+            alt={`Preview of ${item.data.name || 'uploaded file'}`}
+            className="max-h-64"
+          />
         )}
         <ItemTitle>{item.data.name}</ItemTitle>
       </ItemContent>
+      <ItemMedia>
+        <div className="flex flex-col gap-0.5">
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-6 w-6"
+            disabled={index === 0}
+            aria-label={`Move ${item.data.name} up`}
+            onClick={() => onMoveUp(index)}
+          >
+            <ArrowUp size={14} />
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-6 w-6"
+            disabled={index === total - 1}
+            aria-label={`Move ${item.data.name} down`}
+            onClick={() => onMoveDown(index)}
+          >
+            <ArrowDown size={14} />
+          </Button>
+        </div>
+      </ItemMedia>
     </Item>
   )
 }
@@ -92,6 +130,16 @@ const SortableImageFilesList = <T extends File>({ items, onSave, onClose }: TPro
       coordinateGetter: sortableKeyboardCoordinates,
     }),
   )
+
+  const handleMoveUp = (index: number) => {
+    if (index <= 0) return
+    setSortedItems((items) => arrayMove(items, index, index - 1))
+  }
+
+  const handleMoveDown = (index: number) => {
+    if (index >= sortedItems.length - 1) return
+    setSortedItems((items) => arrayMove(items, index, index + 1))
+  }
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
@@ -131,21 +179,28 @@ const SortableImageFilesList = <T extends File>({ items, onSave, onClose }: TPro
   return (
     <div className="overflow-hidden max-h-full flex flex-col gap-4">
       <div className="overflow-hidden flex">
-        <ScrollArea>
+        <div className="overflow-y-auto overflow-x-hidden">
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
             onDragEnd={handleDragEnd}
           >
             <SortableContext items={sortedItems} strategy={verticalListSortingStrategy}>
-              <div className="space-y-2">
-                {sortedItems.map((item) => (
-                  <SortableItem key={item.id} item={item} />
+              <div className="space-y-2 overflow-x-hidden">
+                {sortedItems.map((item, index) => (
+                  <SortableItem
+                    key={item.id}
+                    item={item}
+                    index={index}
+                    total={sortedItems.length}
+                    onMoveUp={handleMoveUp}
+                    onMoveDown={handleMoveDown}
+                  />
                 ))}
               </div>
             </SortableContext>
           </DndContext>
-        </ScrollArea>
+        </div>
       </div>
 
       <div className="flex gap-2">
